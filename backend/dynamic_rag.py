@@ -30,25 +30,20 @@ class DynamicRAG:
     def create_vectorstore(self, documents, document_name):
         """Create vector store from document chunks"""
         try:
-            # Delete previous vectorstore
             chroma_dir = "./chroma_db_dynamic"
             if os.path.exists(chroma_dir):
                 shutil.rmtree(chroma_dir)
-            
             print(f"Creating vector store for '{document_name}'...")
-            
-            # Create new vectorstore
+
             self.vectorstore = Chroma.from_texts(
                 texts=documents,
                 embedding=self.embeddings,
                 persist_directory=chroma_dir,
                 metadatas=[{"source": document_name} for _ in documents]
             )
-            
             self.current_document_name = document_name
             print(f"✓ Vector store created with {len(documents)} chunks")
             return True
-        
         except Exception as e:
             raise Exception(f"Error creating vector store: {str(e)}")
     
@@ -56,7 +51,6 @@ class DynamicRAG:
         """Setup retriever"""
         if not self.vectorstore:
             raise Exception("Vector store not initialized")
-        
         self.retriever = self.vectorstore.as_retriever(
             search_type="similarity",
             search_kwargs={"k": 5}
@@ -66,8 +60,7 @@ class DynamicRAG:
     def setup_qa_chain(self):
         """Setup QA chain"""
         if not self.retriever:
-            raise Exception("Retriever not initialized")
-        
+            raise Exception("Retriever not initialized")  
         prompt_template = """You are a helpful assistant answering questions about the uploaded document.
 
 Document Information:
@@ -124,7 +117,6 @@ Answer based only on the provided document content. If you don't know the answer
                     doc.page_content for doc in result.get("source_documents", [])
                 ]
             }
-        
         except Exception as e:
             raise Exception(f"Error querying: {str(e)}")
     

@@ -20,11 +20,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# Initialize components
 file_processor = FileProcessor()
 rag = DynamicRAG()
 
-# Request/Response models
 class QueryRequest(BaseModel):
     question: str
 
@@ -38,8 +36,6 @@ class QueryResponse(BaseModel):
     answer: str
     document: str
     sources: list
-
-# ============ ENDPOINTS ============
 
 @app.get("/")
 def home():
@@ -58,18 +54,11 @@ def home():
 async def upload_document(file: UploadFile = File(...)):
     """Upload PDF or TXT file and initialize RAG"""
     try:
-        # Validate file type
         if file.filename.endswith(('.pdf', '.txt')):
-            # Save file
             file_path = file_processor.save_uploaded_file(file, file.filename)
             print(f"File saved: {file_path}")
-            
-            # Process file
             chunks = file_processor.process_file(file_path)
-            
-            # Build RAG pipeline
             rag.build_pipeline(chunks, file.filename)
-            
             return UploadResponse(
                 status="success",
                 document=file.filename,
@@ -81,7 +70,6 @@ async def upload_document(file: UploadFile = File(...)):
                 status_code=400,
                 detail="Only PDF and TXT files are supported"
             )
-    
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -93,7 +81,6 @@ def query_document(request: QueryRequest):
             status_code=400,
             detail="No document uploaded yet. Upload a PDF or TXT file first using /api/upload"
         )
-    
     try:
         result = rag.query(request.question)
         return QueryResponse(
@@ -103,7 +90,7 @@ def query_document(request: QueryRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
+    
 @app.get("/api/status")
 def status():
     """Check RAG pipeline status"""

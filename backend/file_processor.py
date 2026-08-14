@@ -21,7 +21,6 @@ class FileProcessor:
                 for page_num in range(num_pages):
                     page = pdf_reader.pages[page_num]
                     text += page.extract_text()
-            
             return text
         except Exception as e:
             raise Exception(f"Error extracting PDF: {str(e)}")
@@ -45,7 +44,6 @@ class FileProcessor:
             chunk_overlap=chunk_overlap,
             separators=["\n\n", "\n", ".", " ", ""]
         )
-        
         chunks = splitter.split_text(text)
         return chunks
     
@@ -66,8 +64,6 @@ class FileProcessor:
     def save_uploaded_file(self, file, filename):
         """Save uploaded file to disk"""
         file_path = os.path.join(self.upload_dir, filename)
-        
         with open(file_path, 'wb') as f:
             f.write(file.file.read())
-        
         return file_path
