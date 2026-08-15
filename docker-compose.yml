@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # Backend API Service
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rag-pdf-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount source code for development
+      - ./backend:/app/backend
+      # Persistent volumes
+      - ./uploads:/app/uploads
+      - ./chroma_db_dynamic:/app/chroma_db_dynamic
+    environment:
+      # Python settings
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      # Load from .env file
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    env_file:
+      - .env
+    networks:
+      - rag-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  rag-network:
+    driver: bridge
