@@ -28,29 +28,38 @@ function App() {
     setSources([]);
 
     try {
-      const response = await fetch(
-        "/api/upload",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-      const data = await response.json();
+      const contentType = response.headers.get("content-type");
+
+      let data;
+
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+
+        throw new Error(
+          `Server returned non-JSON response (${response.status}): ${text.slice(
+            0,
+            300
+          )}`
+        );
+      }
 
       if (!response.ok) {
-        throw new Error(
-          data.detail || "Upload failed"
-        );
+        throw new Error(data.detail || "Upload failed");
       }
 
       setMessage(
         `${data.document} uploaded successfully. ${data.chunks} chunks created.`
       );
-
     } catch (error) {
+      console.error("Upload error:", error);
       setMessage(`❌ ${error.message}`);
-
     } finally {
       setLoading(false);
     }
@@ -69,43 +78,51 @@ function App() {
     setLoading(true);
     setAnswer("");
     setSources([]);
+    setMessage("Generating answer...");
 
     try {
-      const response = await fetch(
-        "/api/query",
-        {
-          method: "POST",
+      const response = await fetch("/api/query", {
+        method: "POST",
 
-          headers: {
-            "Content-Type": "application/json",
-          },
+        headers: {
+          "Content-Type": "application/json",
+        },
 
-          body: JSON.stringify({
-            question: question,
-          }),
-        }
-      );
+        body: JSON.stringify({
+          question: question,
+        }),
+      });
 
-      const data = await response.json();
+      const contentType = response.headers.get("content-type");
+
+      let data;
+
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+
+        throw new Error(
+          `Server returned non-JSON response (${response.status}): ${text.slice(
+            0,
+            300
+          )}`
+        );
+      }
 
       if (!response.ok) {
-        throw new Error(
-          data.detail || "Question failed"
-        );
+        throw new Error(data.detail || "Question failed");
       }
 
       setAnswer(data.answer);
 
-      // Backend now returns structured sources
+      // Backend returns structured sources
       setSources(data.sources || []);
 
-      setMessage(
-        `Answer generated from ${data.document}`
-      );
-
+      setMessage(`Answer generated from ${data.document}`);
     } catch (error) {
+      console.error("Query error:", error);
       setMessage(`❌ ${error.message}`);
-
     } finally {
       setLoading(false);
     }
@@ -117,7 +134,6 @@ function App() {
 
   return (
     <div className="app">
-
       <div className="container">
 
         {/* =================================================
@@ -130,7 +146,6 @@ function App() {
           Upload a document and ask questions about it.
         </p>
 
-
         {/* =================================================
             UPLOAD SECTION
         ================================================= */}
@@ -142,22 +157,17 @@ function App() {
           <input
             type="file"
             accept=".pdf,.txt"
-            onChange={(e) =>
-              setFile(e.target.files[0])
-            }
+            onChange={(e) => setFile(e.target.files[0])}
           />
 
           <button
             onClick={uploadFile}
             disabled={loading}
           >
-            {loading
-              ? "Processing..."
-              : "Upload Document"}
+            {loading ? "Processing..." : "Upload Document"}
           </button>
 
         </div>
-
 
         {/* =================================================
             QUESTION SECTION
@@ -170,22 +180,17 @@ function App() {
           <textarea
             placeholder="Ask something about your document..."
             value={question}
-            onChange={(e) =>
-              setQuestion(e.target.value)
-            }
+            onChange={(e) => setQuestion(e.target.value)}
           />
 
           <button
             onClick={askQuestion}
             disabled={loading}
           >
-            {loading
-              ? "Thinking..."
-              : "Ask Question"}
+            {loading ? "Thinking..." : "Ask Question"}
           </button>
 
         </div>
-
 
         {/* =================================================
             STATUS MESSAGE
@@ -196,7 +201,6 @@ function App() {
             {message}
           </div>
         )}
-
 
         {/* =================================================
             ANSWER
@@ -214,7 +218,6 @@ function App() {
           </div>
         )}
 
-
         {/* =================================================
             SOURCES
         ================================================= */}
@@ -225,13 +228,11 @@ function App() {
             <h2>📖 Sources</h2>
 
             <p className="source-description">
-              The answer was generated using
-              retrieved sections from your document.
+              The answer was generated using retrieved sections
+              from your document.
             </p>
 
-
             {sources.map((source, index) => (
-
               <div
                 className="source"
                 key={index}
@@ -253,13 +254,11 @@ function App() {
 
                 </div>
 
-
                 {/* Document name */}
 
                 <p className="source-document">
                   📄 {source.document}
                 </p>
-
 
                 {/* Retrieved content */}
 
@@ -268,14 +267,12 @@ function App() {
                 </p>
 
               </div>
-
             ))}
 
           </div>
         )}
 
       </div>
-
     </div>
   );
 }
