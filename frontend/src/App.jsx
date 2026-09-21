@@ -9,6 +9,10 @@ function App() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // =========================================================
+  // UPLOAD DOCUMENT
+  // =========================================================
+
   const uploadFile = async () => {
     if (!file) {
       setMessage("Please select a PDF first.");
@@ -35,18 +39,26 @@ function App() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.detail || "Upload failed");
+        throw new Error(
+          data.detail || "Upload failed"
+        );
       }
 
       setMessage(
         `${data.document} uploaded successfully. ${data.chunks} chunks created.`
       );
+
     } catch (error) {
       setMessage(`❌ ${error.message}`);
+
     } finally {
       setLoading(false);
     }
   };
+
+  // =========================================================
+  // ASK QUESTION
+  // =========================================================
 
   const askQuestion = async () => {
     if (!question.trim()) {
@@ -63,9 +75,11 @@ function App() {
         "http://127.0.0.1:8000/api/query",
         {
           method: "POST",
+
           headers: {
             "Content-Type": "application/json",
           },
+
           body: JSON.stringify({
             question: question,
           }),
@@ -75,23 +89,40 @@ function App() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.detail || "Question failed");
+        throw new Error(
+          data.detail || "Question failed"
+        );
       }
 
       setAnswer(data.answer);
+
+      // Backend now returns structured sources
       setSources(data.sources || []);
-      setMessage(`Answer generated from ${data.document}`);
+
+      setMessage(
+        `Answer generated from ${data.document}`
+      );
+
     } catch (error) {
       setMessage(`❌ ${error.message}`);
+
     } finally {
       setLoading(false);
     }
   };
 
+  // =========================================================
+  // UI
+  // =========================================================
+
   return (
     <div className="app">
 
       <div className="container">
+
+        {/* =================================================
+            HEADER
+        ================================================= */}
 
         <h1>📚 PDF RAG Assistant</h1>
 
@@ -99,7 +130,10 @@ function App() {
           Upload a document and ask questions about it.
         </p>
 
-        {/* Upload Section */}
+
+        {/* =================================================
+            UPLOAD SECTION
+        ================================================= */}
 
         <div className="card">
 
@@ -108,19 +142,26 @@ function App() {
           <input
             type="file"
             accept=".pdf,.txt"
-            onChange={(e) => setFile(e.target.files[0])}
+            onChange={(e) =>
+              setFile(e.target.files[0])
+            }
           />
 
           <button
             onClick={uploadFile}
             disabled={loading}
           >
-            {loading ? "Processing..." : "Upload Document"}
+            {loading
+              ? "Processing..."
+              : "Upload Document"}
           </button>
 
         </div>
 
-        {/* Question Section */}
+
+        {/* =================================================
+            QUESTION SECTION
+        ================================================= */}
 
         <div className="card">
 
@@ -129,19 +170,26 @@ function App() {
           <textarea
             placeholder="Ask something about your document..."
             value={question}
-            onChange={(e) => setQuestion(e.target.value)}
+            onChange={(e) =>
+              setQuestion(e.target.value)
+            }
           />
 
           <button
             onClick={askQuestion}
             disabled={loading}
           >
-            {loading ? "Thinking..." : "Ask Question"}
+            {loading
+              ? "Thinking..."
+              : "Ask Question"}
           </button>
 
         </div>
 
-        {/* Status */}
+
+        {/* =================================================
+            STATUS MESSAGE
+        ================================================= */}
 
         {message && (
           <div className="message">
@@ -149,7 +197,10 @@ function App() {
           </div>
         )}
 
-        {/* Answer */}
+
+        {/* =================================================
+            ANSWER
+        ================================================= */}
 
         {answer && (
           <div className="card">
@@ -163,18 +214,61 @@ function App() {
           </div>
         )}
 
-        {/* Sources */}
+
+        {/* =================================================
+            SOURCES
+        ================================================= */}
 
         {sources.length > 0 && (
           <div className="card">
 
-            <h2>📖 Retrieved Sources</h2>
+            <h2>📖 Sources</h2>
+
+            <p className="source-description">
+              The answer was generated using
+              retrieved sections from your document.
+            </p>
+
 
             {sources.map((source, index) => (
-              <div className="source" key={index}>
-                <strong>Source {index + 1}</strong>
-                <p>{source}</p>
+
+              <div
+                className="source"
+                key={index}
+              >
+
+                {/* Source header */}
+
+                <div className="source-header">
+
+                  <strong>
+                    Source {index + 1}
+                  </strong>
+
+                  {source.page && (
+                    <span className="page-badge">
+                      Page {source.page}
+                    </span>
+                  )}
+
+                </div>
+
+
+                {/* Document name */}
+
+                <p className="source-document">
+                  📄 {source.document}
+                </p>
+
+
+                {/* Retrieved content */}
+
+                <p className="source-content">
+                  {source.content}
+                </p>
+
               </div>
+
             ))}
 
           </div>

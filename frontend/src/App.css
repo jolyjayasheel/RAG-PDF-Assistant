@@ -90,3 +90,43 @@ button:disabled {
 .source p {
   line-height: 1.5;
 }
+.source-description {
+  color: #666;
+  margin-bottom: 15px;
+  line-height: 1.5;
+}
+
+.source {
+  background: #f8f9fa;
+  padding: 18px;
+  margin-top: 15px;
+  border-radius: 10px;
+  border-left: 4px solid #222;
+}
+
+.source-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.page-badge {
+  background: #222;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.source-document {
+  font-size: 14px;
+  color: #555;
+  margin: 8px 0;
+}
+
+.source-content {
+  line-height: 1.6;
+  color: #333;
+  margin-top: 10px;
+}

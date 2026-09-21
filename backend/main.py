@@ -86,7 +86,7 @@ def query_document(request: QueryRequest):
         return QueryResponse(
             answer=result["answer"],
             document=result["document"],
-            sources=result["source_chunks"]
+            sources=result["sources"]
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
