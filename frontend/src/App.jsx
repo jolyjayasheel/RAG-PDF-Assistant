@@ -29,7 +29,7 @@ function App() {
 
     try {
       const response = await fetch(
-        "http://3.25.69.152/api/upload",
+        "/api/upload",
         {
           method: "POST",
           body: formData,
@@ -72,7 +72,7 @@ function App() {
 
     try {
       const response = await fetch(
-        "http://3.25.69.152/api/query",
+        "/api/query",
         {
           method: "POST",
 
