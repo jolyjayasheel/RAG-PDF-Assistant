@@ -5,16 +5,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Disable Chroma telemetry before importing Chroma
+# Disable Chroma telemetry
 os.environ["ANONYMIZED_TELEMETRY"] = "False"
 
 from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import OllamaEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_groq import ChatGroq
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
-from langchain.retrievers import ContextualCompressionRetriever
-from langchain.retrievers.document_compressors import LLMChainExtractor
 
 
 # Windows console encoding
@@ -34,13 +32,21 @@ class DynamicRAG:
     """Dynamic RAG pipeline for uploaded documents."""
 
     def __init__(self):
-        self.embeddings = OllamaEmbeddings(
-            model="nomic-embed-text",
-            base_url=os.getenv(
-                "OLLAMA_BASE_URL",
-                "http://host.docker.internal:11434"
-            )
+
+        print("[START] Loading HuggingFace embedding model...")
+
+        self.embeddings = HuggingFaceEmbeddings(
+            model_name="sentence-transformers/all-MiniLM-L6-v2",
+            model_kwargs={
+                "device": "cpu"
+            },
+            encode_kwargs={
+                "normalize_embeddings": True,
+                "batch_size": 32
+            }
         )
+
+        print("[OK] Embeddings model loaded!")
 
         self.llm = ChatGroq(
             model=os.getenv(
@@ -49,29 +55,39 @@ class DynamicRAG:
             ),
             temperature=0
         )
+
         self.vectorstore = None
         self.retriever = None
         self.qa_chain = None
         self.current_document_name = None
 
+    # ======================================================
+    # CREATE VECTOR STORE
+    # ======================================================
+
     def create_vectorstore(self, documents, document_name):
         """Create Chroma vector store from document chunks."""
+
         try:
+
             # Delete previous vector store
             if self.vectorstore is not None:
                 try:
                     self.vectorstore.delete_collection()
                 except Exception:
                     pass
+
                 self.vectorstore = None
+
             print(
                 f"Creating vector store for '{document_name}'..."
             )
 
+            # Add document name to metadata
             for document in documents:
-
                 document.metadata["source"] = document_name
 
+            # Create Chroma vector store
             self.vectorstore = Chroma.from_documents(
                 documents=documents,
                 embedding=self.embeddings
@@ -85,13 +101,19 @@ class DynamicRAG:
             )
 
             return True
+
         except Exception as e:
+
             raise Exception(
                 f"Error creating vector store: {str(e)}"
             )
 
+    # ======================================================
+    # SETUP RETRIEVER
+    # ======================================================
+
     def setup_retriever(self):
-        """Setup similarity retriever with context compression."""
+        """Setup similarity-based retriever."""
 
         if not self.vectorstore:
             raise Exception(
@@ -106,25 +128,20 @@ class DynamicRAG:
             f"[OK] Retriever configured with k={k}"
         )
 
-        base_retriever = self.vectorstore.as_retriever(
+        self.retriever = self.vectorstore.as_retriever(
             search_type="similarity",
             search_kwargs={
                 "k": k
             }
         )
 
-        compressor = LLMChainExtractor.from_llm(
-            self.llm
-        )
-
-        self.retriever = ContextualCompressionRetriever(
-            base_compressor=compressor,
-            base_retriever=base_retriever
-        )
-
         print(
-            "[OK] Retriever + context compression setup complete"
+            "[OK] Similarity retriever setup complete"
         )
+
+    # ======================================================
+    # SETUP QA CHAIN
+    # ======================================================
 
     def setup_qa_chain(self):
         """Setup RetrievalQA chain."""
@@ -150,8 +167,10 @@ Instructions:
 - Answer using only the provided context.
 - Do not invent information.
 - If the answer is not present in the context,
-  say: "I don't have this information in the document."
+  say exactly:
+  "I don't have this information in the document."
 - Give a clear and concise answer.
+- When possible, preserve important details from the document.
 """
 
         prompt = PromptTemplate(
@@ -185,7 +204,7 @@ Instructions:
         documents,
         document_name
     ):
-        """Build complete RAG pipeline."""
+        """Build the complete RAG pipeline."""
 
         try:
 
@@ -194,16 +213,16 @@ Instructions:
                 f"'{document_name}'..."
             )
 
-            # Step 1: Vector store
+            # Step 1: Create embeddings + Chroma
             self.create_vectorstore(
                 documents,
                 document_name
             )
 
-            # Step 2: Retriever + compression
+            # Step 2: Configure retriever
             self.setup_retriever()
 
-            # Step 3: QA chain
+            # Step 3: Configure QA chain
             self.setup_qa_chain()
 
             print(
@@ -219,6 +238,10 @@ Instructions:
                 f"Error building pipeline: {str(e)}"
             )
 
+    # ======================================================
+    # QUERY
+    # ======================================================
+
     def query(self, question):
         """Query the RAG pipeline."""
 
@@ -233,7 +256,6 @@ Instructions:
                 f"\nQuerying: {question}"
             )
 
-            # Run RAG pipeline
             result = self.qa_chain.invoke(
                 {
                     "query": question
@@ -281,6 +303,10 @@ Instructions:
             raise Exception(
                 f"Error querying: {str(e)}"
             )
+
+    # ======================================================
+    # STATUS
+    # ======================================================
 
     def is_ready(self):
         """Check whether RAG pipeline is ready."""

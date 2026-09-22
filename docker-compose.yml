@@ -1,36 +1,39 @@
-version: '3.8'
-
 services:
-  # Backend API Service
+
   backend:
     build:
       context: .
       dockerfile: Dockerfile
+
     container_name: rag-pdf-backend
+
     ports:
       - "8000:8000"
+
     volumes:
-      # Mount source code for development
+
+      # Backend source code
       - ./backend:/app/backend
 
-      # Persistent volumes
+      # Uploaded files
       - ./uploads:/app/uploads
+
+      # Chroma database
       - ./chroma_db_dynamic:/app/chroma_db_dynamic
 
-    environment:
-      # Python settings
-      - PYTHONUNBUFFERED=1
-      - PYTHONDONTWRITEBYTECODE=1
+      # HuggingFace model cache
+      - huggingface_cache:/root/.cache/huggingface
 
-      # Load from .env file
-      - GROQ_API_KEY=${GROQ_API_KEY}
-      - OLLAMA_BASE_URL=http://ollama:11434
+    environment:
+
+      PYTHONUNBUFFERED: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      GROQ_MODEL: ${GROQ_MODEL:-qwen/qwen3.8-27b}
 
     env_file:
       - .env
-
-    depends_on:
-      - ollama
 
     networks:
       - rag-network
@@ -38,31 +41,26 @@ services:
     restart: unless-stopped
 
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
+      test:
+        [
+          "CMD",
+          "curl",
+          "-f",
+          "http://localhost:8000/api/status"
+        ]
+
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
-
-
-  # Ollama Service
-  ollama:
-    image: ollama/ollama:latest
-    container_name: rag-pdf-ollama
-
-    volumes:
-      - ollama_data:/root/.ollama
-
-    networks:
-      - rag-network
-
-    restart: unless-stopped
+      start_period: 60s
 
 
 networks:
+
   rag-network:
     driver: bridge
 
 
 volumes:
-  ollama_data:
+
+  huggingface_cache:
